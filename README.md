@@ -145,6 +145,17 @@ Handling of secrets:
 ## Demo
 
 ```bash
+./bin/demo
+```
+
+Starts everything the demo needs — Redis, the local model server, the web server, the queue worker
+and the scheduler — skipping whatever is already up and reporting plainly when something failed.
+Five processes have to be running for an investigation to complete, and during development every
+one of them went down at least once.
+
+The equivalent by hand:
+
+```bash
 php artisan serve
 php artisan queue:work        # required — the UI dispatches investigations to the queue
 php artisan schedule:work     # required for automated monitoring; drives polling and detection

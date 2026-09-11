@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+#
+# Bring up everything the demo needs, in one command.
+#
+# Five processes have to be running for an investigation to work end to end, and
+# during development every one of them went down at least once -- Redis stopped
+# mid-eval, the model server was never started, the queue worker silently
+# swallowed jobs. This starts what is missing, leaves what is already up alone,
+# and says plainly when something is wrong rather than looking fine.
+set -uo pipefail
+cd "$(dirname "$0")/.." || exit 1
+
+LOGS="storage/logs/demo"
+mkdir -p "$LOGS"
+
+green() { printf "  \033[32m✓\033[0m %s\n" "$1"; }
+amber() { printf "  \033[33m•\033[0m %s\n" "$1"; }
+red()   { printf "  \033[31m✗\033[0m %s\n" "$1"; }
+
+running() { pgrep -f "$1" >/dev/null 2>&1; }
+
+start() {  # start <pattern> <label> <command...>
+  local pattern="$1" label="$2"; shift 2
+  if running "$pattern"; then green "$label (already running)"; return; fi
+  nohup "$@" > "$LOGS/$(echo "$label" | tr ' /:()' '_____').log" 2>&1 &
+  sleep 1
+  if running "$pattern"; then green "$label started"; else red "$label failed -- see $LOGS"; fi
+}
+
+echo "Connector -- starting the demo stack"
+echo
+
+# --- dependencies ---------------------------------------------------------
+if redis-cli ping >/dev/null 2>&1; then
+  green "redis"
+else
+  start "redis-server" "redis" redis-server --port 6379
+fi
+
+if pg_isready -q; then green "postgres"; else red "postgres is not accepting connections"; fi
+
+# --- local inference ------------------------------------------------------
+# Jan's own API server does not reliably expose the loaded model, so the same
+# llama-server Jan ships is started directly and the app points at it.
+JAN_DATA="$HOME/Library/Application Support/Jan/data"
+MODEL="$JAN_DATA/llamacpp/models/Jan-v3.5-4B-Q4_K_XL/model.gguf"
+BIN=$(find "$JAN_DATA/llamacpp/backends" -name llama-server -type f 2>/dev/null | head -1)
+
+if curl -s -m 3 http://127.0.0.1:1339/v1/models >/dev/null 2>&1; then
+  green "model server (:1339)"
+elif [ -x "$BIN" ] && [ -f "$MODEL" ]; then
+  start "llama-server.*1339" "model server" \
+    "$BIN" --model "$MODEL" --alias Jan-v3.5-4B-Q4_K_XL \
+    --host 127.0.0.1 --port 1339 --ctx-size 16384 --jinja --no-webui
+  amber "the model takes a few seconds to load"
+else
+  red "no llama-server or model found under Jan's data directory"
+fi
+
+# --- application ----------------------------------------------------------
+start "artisan serve" "web server (:8000)" php artisan serve --port=8000
+start "queue:work"    "queue worker"       php artisan queue:work --tries=1 --timeout=900
+start "schedule:work" "scheduler"          php artisan schedule:work
+
+echo
+echo "Checks"
+sleep 3
+
+if curl -s -m 8 http://127.0.0.1:8000/healthz >/dev/null 2>&1; then
+  green "/healthz responding"
+else
+  amber "/healthz not up yet"
+fi
+
+if php artisan chaos status 2>/dev/null | grep -q 'healthy'; then
+  green "no chaos scenario active"
+else
+  amber "a chaos scenario is active -- clear with: php artisan chaos reset"
+fi
+
+echo
+echo "  http://127.0.0.1:8000/admin"
+echo "  logs: $LOGS"
