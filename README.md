@@ -30,12 +30,10 @@ no report, because it carries the authority of one.
 
 ## 01 · Demo video
 
-> **📹 Two-minute walkthrough:** _link to be added_
+> ### 📹 [Watch the demo](https://drive.google.com/file/d/12MaYV-9BEHBi3vYmyKSXExbYinEbo7uh/view?usp=sharing)
 
-<!-- Paste the link above once recorded. Script and timings are in VIDEO.md. -->
-
-Two minutes, start to finish: the fabrication above, an incident detected without anyone filing it,
-the investigation with every claim traceable to its evidence, and the numbers behind it.
+Start to finish: the fabricated citations above, an incident detected without anyone filing it, the
+investigation with every claim traceable to its evidence, and the numbers behind it.
 
 ---
 
