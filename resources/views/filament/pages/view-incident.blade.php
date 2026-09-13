@@ -58,9 +58,7 @@
 
     {{-- The evidence itself, before any of the agent's conclusions about it --}}
     <x-filament::section heading="Timeline" icon="heroicon-o-chart-bar">
-        <div class="h-72">
-            @livewire(\App\Filament\Widgets\IncidentTimeline::class, ['record' => $record], key('timeline-'.$record->id))
-        </div>
+        @livewire(\App\Filament\Widgets\IncidentTimeline::class, ['record' => $record], key('timeline-'.$record->id))
     </x-filament::section>
 
     @php $history = $this->investigationHistory(); @endphp

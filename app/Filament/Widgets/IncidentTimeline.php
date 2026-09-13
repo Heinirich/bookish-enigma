@@ -24,6 +24,8 @@ class IncidentTimeline extends ChartWidget
 
     protected static bool $isLazy = false;
 
+    protected ?string $maxHeight = '200px';
+
     protected int|string|array $columnSpan = 'full';
 
     protected function getType(): string

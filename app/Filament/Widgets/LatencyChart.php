@@ -19,6 +19,10 @@ class LatencyChart extends ChartWidget
     // anyone looks at, and a skeleton placeholder is a poor opening frame.
     protected static bool $isLazy = false;
 
+    // Tall enough to read the step, short enough that the table below it is
+    // visible without scrolling.
+    protected ?string $maxHeight = '220px';
+
     protected ?string $pollingInterval = '15s';
 
     protected int|string|array $columnSpan = 'full';

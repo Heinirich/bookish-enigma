@@ -25,6 +25,8 @@ class HealthPingCommand extends Command
     /** Stop before the next scheduler tick so withoutOverlapping() never skips a run. */
     private const MAX_TICK_SECONDS = 55;
 
+    private const REQUEST_TIMEOUT_SECONDS = 15;
+
     /** Seconds between samples within one invocation; 0 means fire back to back. */
     private int $spacingSeconds = 0;
 
@@ -125,7 +127,7 @@ class HealthPingCommand extends Command
         $errorMessage = null;
 
         try {
-            $response = Http::timeout(15)->acceptJson()->get($endpoint->url);
+            $response = Http::timeout(self::REQUEST_TIMEOUT_SECONDS)->acceptJson()->get($endpoint->url);
             $statusCode = $response->status();
 
             $body = $response->json();
@@ -138,7 +140,32 @@ class HealthPingCommand extends Command
             $errorMessage = $e->getMessage();
         }
 
-        $latencyMs = (int) round((microtime(true) - $startedAt) * 1000);
+        $elapsedMs = (int) round((microtime(true) - $startedAt) * 1000);
+
+        /*
+        | A sample far longer than the HTTP timeout is not measuring the service.
+        |
+        | Wall clock keeps advancing while the host is suspended, so a request in
+        | flight when the laptop sleeps comes back reporting minutes. Two such
+        | samples -- 998s and 301s against a 15s timeout -- were enough to flatten
+        | every latency chart, and one inside a baseline window would push p95 so
+        | high that a real degradation could not trip the detector.
+        |
+        | The attempt is still recorded, because the endpoint genuinely did not
+        | answer, but the duration is clamped to something the timeout could
+        | actually have produced.
+        */
+        $ceilingMs = self::REQUEST_TIMEOUT_SECONDS * 1000;
+
+        if ($elapsedMs > $ceilingMs * 2) {
+            $errorMessage = 'Measurement discarded: host suspended mid-request ('
+                .round($elapsedMs / 1000).'s wall clock against a '
+                .self::REQUEST_TIMEOUT_SECONDS.'s timeout)';
+            $elapsedMs = $ceilingMs;
+            $statusCode = null;
+        }
+
+        $latencyMs = $elapsedMs;
 
         return HealthCheck::create([
             'monitored_endpoint_id' => $endpoint->id,
