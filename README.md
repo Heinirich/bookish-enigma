@@ -17,6 +17,122 @@ produced this unprompted:
 
 Every one of those IDs is invented. Rejecting citations like these is the core of the system.
 
+---
+
+## 01 · Project overview
+
+**The problem.** An alert fires at 3am — "payment API latency spike". Someone spends forty minutes
+pulling up dashboards, scrolling deploy history, and guessing which of the last six commits did it.
+Then they write it up, badly, and the next person starts over.
+
+**What this does.** Takes the vague alert and produces a documented investigation: it measures what
+happened, correlates it against what shipped, reads the actual diffs, and reports a cause with a
+mechanism and a next step. Then it drafts the Slack channel, the Jira ticket and the Notion
+write-up — and waits for a human before sending any of them.
+
+**Why it is different.** The agent cannot assert a cause in prose. Every conclusion is a structured
+object carrying the evidence IDs it rests on, and those IDs are validated against a ledger written
+*before* the model is consulted. A fabricated citation is provably invalid rather than merely
+unverified. That matters because the model does fabricate — see the opening example above.
+
+Inference runs on a **local 4B model** (Jan / llama.cpp). No API key, no data leaving the machine.
+
+## 02 · External apps used
+
+| App | What the agent does with it | Status |
+|---|---|---|
+| **GitHub** | Pulls deployments, commits and real diffs for the incident window; the correlation evidence | Live — `ApiGitHubConnector` |
+| **Slack** | Opens the incident channel and posts the summary; also accepts `/investigate` as an inbound slash command | Implemented — `ApiSlackConnector` |
+| **Jira** | Files the incident ticket in Atlassian Document Format, linked to the suspect commit | Implemented — `ApiJiraConnector` |
+| **Notion** | Publishes the full investigation write-up with the evidence ledger | Implemented — `ApiNotionConnector` |
+
+Every connector has a real API driver and a Fake driver behind the same contract. Credentials are
+configured at `/admin/connectors`, stored **encrypted in the database** rather than in `.env`, and
+verified with read-only identity checks (`php artisan connectors test all`) that never create
+anything.
+
+Slack is two-way: `/investigate the payment API feels slow` opens an incident from any channel and
+returns the findings there. That endpoint is HMAC signature-verified with replay rejection, and
+refuses every request when no signing secret is set.
+
+**Every outbound write is held for human approval.** An agent that investigates autonomously and
+publishes autonomously is a different risk profile, and not one we wanted to ship.
+
+## 03 · Setup instructions
+
+Requires PHP 8.4, PostgreSQL, Redis, and [Jan](https://jan.ai) with the `Jan-v3.5-4B-Q4_K_XL` model
+downloaded.
+
+```bash
+composer install && npm install && npm run build
+cp .env.example .env && php artisan key:generate
+createdb connector
+php artisan migrate --seed
+./bin/demo                 # starts redis, model server, web, queue worker, scheduler
+```
+
+Sign in at `http://127.0.0.1:8000/admin` with `heinrich@quickorganics.com` / `password`.
+
+To see the whole loop:
+
+```bash
+php artisan demo:seed cache-stampede --fresh   # stage an incident with a known cause
+php artisan health:detect                      # detector opens it and queues the investigation
+```
+
+Or press **Stage** on any scenario under *Chaos control*, then **Investigate** on the incident.
+Full walkthrough in [DEMO.md](DEMO.md).
+
+## 04 · Reliability testing
+
+Three independent layers, because "the demo worked once" is not evidence.
+
+**A 52-test suite** (`php artisan test`) run against real PostgreSQL, not SQLite — the correlator
+depends on `percentile_cont` and `date_trunc` window functions, so an SQLite run would exercise
+different code. Covers the validator's adversarial cases, correlator ranking across every scenario,
+Slack signature forgery and replay, credential precedence, and the schedule's rate limits.
+
+**An evaluation harness** (`php artisan eval:run`) scoring the agent against seven seeded incidents
+with known causes. Five metrics, because "did it get the right answer" alone would reward a
+confident guesser:
+
+| | |
+|---|---|
+| root cause hit | did the leading hypothesis name the real deploy |
+| evidence real | were the citations genuine |
+| grounding | were the figures traceable to cited evidence |
+| Brier score | did stated confidence track correctness |
+| action completeness | were all three write-ups staged |
+
+**Current result: 7/7 root cause, 100% evidence-real, 0 fabricated citations across 99 references.**
+
+Two scenarios exist specifically to keep that number honest. `ambiguous-tie` ships a decoy in the
+same minute as the culprit on the same code path — the correlator scores an exact **0.000** margin,
+so only reading the code separates them. `no-deploy-cause` has nothing shipped near the break, and
+the correct answer is to implicate *no* deployment.
+
+**Ablations** measuring what each guardrail is worth rather than assuming:
+
+| | root cause | grounding |
+|---|---|---|
+| full | **100%** | **100%** |
+| `no-correlator` | 85.7% | 92.9% |
+| `no-validator` | 85.7% | 97.6% |
+
+With validation off, on the scenario where no deploy is responsible, it blamed commit `0317177` —
+which adds a markdown file. That is a real commit from this repository, pulled in live through the
+GitHub connector. The guardrail rejects that claim as ungrounded.
+
+Seeded scenarios measure capability under known conditions, so incidents can also be **resolved with
+a human verdict** on each hypothesis — a second accuracy figure kept deliberately separate, because
+"right about a real incident" and "right about one we planted" are different claims.
+
+## 05 · Demo video
+
+[Link to be added before submission — two minutes, per the brief.]
+
+---
+
 ## How it works
 
 ```
