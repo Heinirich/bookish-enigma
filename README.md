@@ -28,7 +28,18 @@ no report, because it carries the authority of one.
 
 ---
 
-## 01 · Project overview
+## 01 · Demo video
+
+> **📹 Two-minute walkthrough:** _link to be added_
+
+<!-- Paste the link above once recorded. Script and timings are in VIDEO.md. -->
+
+Two minutes, start to finish: the fabrication above, an incident detected without anyone filing it,
+the investigation with every claim traceable to its evidence, and the numbers behind it.
+
+---
+
+## 02 · Project overview
 
 An alert fires: *"payment API latency spike."* Someone spends forty minutes pulling up dashboards,
 scrolling deploy history and guessing which of the last six commits did it. They write it up badly,
@@ -61,7 +72,7 @@ evaluation case with known ground truth rather than an anecdote.
 
 ---
 
-## 02 · External apps used
+## 03 · External apps used
 
 | App | What the agent does with it |
 |---|---|
@@ -104,7 +115,7 @@ and publishes autonomously is a different risk profile, and not one worth shippi
 
 ---
 
-## 03 · Setup instructions
+## 04 · Setup instructions
 
 **Requires** PHP 8.4, PostgreSQL, Redis, Node 20+, and [Jan](https://jan.ai) with the
 `Jan-v3.5-4B-Q4_K_XL` model downloaded.
@@ -156,7 +167,7 @@ appears. A full walkthrough is in [DEMO.md](DEMO.md).
 
 ---
 
-## 04 · Reliability testing
+## 05 · Reliability testing
 
 Three independent layers, because *"the demo worked once"* is not evidence.
 
@@ -253,14 +264,6 @@ figure kept deliberately apart on the dashboard. *"Right about a real incident"*
 one we planted"* are different claims, and averaging them would blur the distinction that matters
 most. Below five verdicts the dashboard says so rather than showing a percentage, because a rate
 over three judgements is noise.
-
----
-
-## 05 · Demo video
-
-> **📹 Two-minute demo:** _link to be added_
-
-<!-- Paste the link above once recorded. Script and timings are in VIDEO.md. -->
 
 ---
 
