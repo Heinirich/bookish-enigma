@@ -31,3 +31,6 @@ Thumbs.db
 
 # Redis dump that lands here when redis-server is started from the project dir
 dump.rdb
+
+# Raw recordings — host the demo video and link it instead
+Video/
