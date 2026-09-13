@@ -108,9 +108,11 @@ class EvalRunCommand extends Command
         $this->line('<options=bold>Model comparison</> — identical scenarios');
 
         $this->table(
-            ['model', 'root cause', 'evidence real', 'grounding', 'Brier'],
+            ['run', 'root cause', 'evidence real', 'grounding', 'Brier'],
             array_map(fn (EvaluationRun $r) => [
-                $r->model,
+                // The label carries the ablation; the model alone would print the
+                // same name on every row of an ablation comparison.
+                $r->label,
                 $this->pct($r->root_cause_hit_rate),
                 $this->pct($r->evidence_real_rate),
                 $this->pct($r->grounding_rate),

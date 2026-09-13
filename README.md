@@ -314,32 +314,35 @@ incident*. Averaging them would blur the distinction that matters most.
 Below five verdicts the dashboard says so rather than showing a percentage, because a rate over
 three judgements is noise.
 
-### Ablations, and an honest result
+### Ablations: what each guardrail is worth
 
-`--ablate` disables a guardrail so its contribution can be measured rather than assumed:
+`--ablate` disables a guardrail so its contribution is measured rather than assumed. All three runs
+face the same seven scenarios, regenerated from scratch.
 
-| | root cause | evidence real | fabricated |
-|---|---|---|---|
-| full | 100% | 100% | 0 |
-| `no-correlator` — model correlates unaided | 100% | 100% | 0 |
-| `no-validator` — no repair turn, nothing rejected | 100% | 100% | 0 |
+| | root cause | evidence real | grounding | Brier |
+|---|---|---|---|---|
+| **full** | **100%** | 100% | **100%** | **0.000** |
+| `no-correlator` — model correlates unaided | 85.7% | 100% | 92.9% | 0.143 |
+| `no-validator` — nothing rejected, no repair turn | 85.7% | 100% | 97.6% | 0.143 |
 
-**The guardrails caught nothing on these scenarios**, and that is worth stating plainly rather than
-claiming credit they did not earn.
+An earlier version of this table showed no difference at all, and the reason was the scenarios
+rather than the guardrails: the diffs described their own defects, so the model could score
+perfectly by reading a label. Once that was removed, both guardrails started earning their place.
 
-What the ablation actually shows: given an evidence block with explicit IDs and a schema that
-forces citation, this model does not fabricate. The original unconstrained probe *did* invent
-`latency_log_abc123_01` — but that was with no ledger in context at all. So the ledger and the
-prompt constraint are doing the preventive work; the validator is what makes "no fabricated
-citations" a checkable property rather than a hope. It is a guarantee, not a routine corrector.
+The `no-validator` failure is worth stating precisely. On `no-deploy-cause` — where the correct
+answer is that **no deployment is responsible** — the unguarded run blamed commit `0317177`, which
+adds a markdown file and nothing else. It reached the agent through the live GitHub sync, so this
+is a real commit from this repository being blamed for a latency spike. With validation on, that
+claim is rejected as ungrounded and the run correctly implicates nothing.
 
-These ablation figures predate the scenario rewrite described below and need re-running; the
-numbers they were measured against gave the answer away.
+Grounding drops too: figures that appear in no cited evidence reach the output at 92.9% and 97.6%
+against 100% with both guardrails on.
 
-**Current result on the rewritten scenarios: 7/7 root cause, 100% evidence-real, 0 fabricated
-citations across 99 cited references.** That is with nothing in the evidence naming the defect or
-exonerating a decoy, and it includes `ambiguous-tie`, where the correlator scores an exact 0.000
-margin and only reading the code separates the two candidates.
+**Evidence-real holds at 100% throughout**, including with the validator off. That is the honest
+nuance: the ledger prevents fabricated citations upstream by fixing the valid set before generation,
+so the validator is a guarantee rather than a routine corrector. It is what makes "no fabricated
+citations" checkable instead of hoped-for — and the run above shows what still gets through
+without it.
 
 ## Layout
 

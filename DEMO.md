@@ -102,12 +102,28 @@ Scroll to **Verification**: claims generated, accepted, **fabricated: 0**.
 > "Seven seeded incidents with known causes. 7/7 root cause. Zero fabricated
 > citations across 99 references."
 
-Then the honest part — say it before anyone asks:
+Then the ablation — this is the strongest thing you have:
 
-> "We ran it with the guardrail switched off. It caught nothing, because the
-> ledger prevents the failure upstream rather than catching it downstream. The
-> validator is a guarantee, not a corrector. We would rather tell you that than
-> have you find it."
+> "We ran the same seven scenarios with each guardrail switched off."
+
+| | root cause | grounding |
+|---|---|---|
+| full | **100%** | **100%** |
+| no correlator | 85.7% | 92.9% |
+| no validator | 85.7% | 97.6% |
+
+> "With validation off, one case fails in a specific way. On the scenario where
+> the right answer is *no deploy caused this*, it blamed commit `0317177`. That
+> commit adds a markdown file. It is a real commit from our repository, pulled
+> in live from GitHub, and with the guardrail off the agent blamed our own demo
+> script for an outage."
+
+Then the nuance, before anyone asks:
+
+> "Notice evidence-real stays at 100% even with the validator off. The ledger
+> prevents fabricated citations upstream by fixing the valid set before the model
+> is consulted. So the validator is a guarantee, not a corrector — and the run
+> above shows what still gets through without it."
 
 Finish on the write actions:
 
